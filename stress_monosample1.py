@@ -7,6 +7,7 @@ import argparse
 from multiprocessing import Pool, Manager
 from functools import partial
 import time
+import time
 # from mpi4py import MPI
 
 def corr(a, b):
@@ -113,7 +114,7 @@ def realization(Qh, num_years, r):
 # @profile
 def gen_sample(sample_no, num_realizations):
 
-	inflow_dir = 'historical'
+	inflow_dir = 'inflow-data_updated'
 	inflow_files = ['claytonGageInflow', 'crabtreeCreekInflow', 'updatedFallsLakeInflow', 'updatedJordanLakeInflow', 'updatedLakeWBInflow', 'updatedLillingtonInflow', 'updatedLittleRiverInflow', 'updatedLittleRiverRaleighInflow', 'updatedMichieInflow', 'updatedOWASAInflow']
 
 	num_years = 51
@@ -156,11 +157,19 @@ def gen_sample(sample_no, num_realizations):
 			print 'stress_dynamic took %0.3f s' % ((time2-time1))
 
 	for k in range(len(inflow_files)):
-		np.savetxt('inflow-synthetic/' + inflow_files[k] + 'SYN' + str(int(sample_no)) + '.csv', output[k], delimiter=',')
+		np.savetxt('output/' + inflow_files[k] + 'SYN' + str(int(sample_no)) + '.csv', output[k], delimiter=',')
 
-if __name__ == '__main__':
+# if __name__ == '__main__':
 # comm = MPI.COMM_WORLD
 
 # print comm.rank
 # gen_sample(comm.rank, 1000)
-	gen_sample(0, 1000)
+num_realizations = [1, 10, 100, 1000, 10000]
+times = []
+for i in range(len(num_realizations)):
+	start = time.clock()
+	gen_sample(i, num_realizations[i])
+	end = time.clock()
+	times.append([end - start, num_realizations[i]])
+
+np.savetxt('times' + '.csv', times, delimiter=',')
