@@ -8,4 +8,4 @@
 
 cd $PBS_O_WORKDIR
 module load python-2.7.5
-time python stress_monosample1.py
+time python qsynth-weekly-example.py

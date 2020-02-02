@@ -1,12 +1,11 @@
+from __future__ import print_function
 import numpy as np
 from math import ceil, floor
 from scipy.stats import pearsonr
 from scipy.linalg import cholesky
-import os
 import argparse
 from multiprocessing import Pool, Manager
 from functools import partial
-import time
 import time
 # from mpi4py import MPI
 
@@ -100,35 +99,17 @@ def stress_dynamic(Q_historical, num_years):
 
 # def realization(m, r):
 def realization(Qh, num_years, r):
-	print 'running realization ' + str(r)
-	time1 = time.time()
+	np.random.seed(r) # !IMPORTANT(otherwise all subprocess will have same seed)!
 	Qs = stress_dynamic(Qh, num_years) # or call stress(Qh, num_years, p, n)
-	# Qs = stress_dynamic(m[0], m[1]) # or call stress(Qh, num_years, p, n)
-
-	time2 = time.time()
-	print 'stress_dynamic took %0.3f s' % ((time2-time1))
-
 	return Qs
 
 #def gen_sample(args):
 # @profile
-def gen_sample(sample_no, num_realizations):
+def gen_sample(Qh, num_sites, num_realizations, num_years, freq, parallel):
 
-	inflow_dir = 'inflow-data_updated'
-	inflow_files = ['claytonGageInflow', 'crabtreeCreekInflow', 'updatedFallsLakeInflow', 'updatedJordanLakeInflow', 'updatedLakeWBInflow', 'updatedLillingtonInflow', 'updatedLittleRiverInflow', 'updatedLittleRiverRaleighInflow', 'updatedMichieInflow', 'updatedOWASAInflow']
-
-	num_years = 51
-
-	Qh = []
 	output = []
-	for k in range(len(inflow_files)):
-		hyd_data = np.loadtxt(inflow_dir + '/' + inflow_files[k] + '.csv', delimiter=',')
-		Qh.append(hyd_data)
-		output.append(np.zeros([num_realizations, num_years * 52]))
-
-
-	if not os.path.exists('inflow-synthetic/'):
-	    os.makedirs('inflow-synthetic/')
+	for k in range(num_sites):
+		output.append(np.zeros([num_realizations, num_years * freq]))
 
 	# m = Manager().list()
 	# m.append(Qh)
@@ -136,40 +117,43 @@ def gen_sample(sample_no, num_realizations):
 	# partial_realization = partial(realization, m)
 	# output_parallel = Pool().map(partial_realization, range(num_realizations))
 
-	parallel=True
 	if parallel:
+
 		partial_realization = partial(realization, Qh, num_years)
 		output_parallel = Pool().map(partial_realization, range(num_realizations))
 
 		for r in range(num_realizations):
-			for k in range(len(inflow_files)):
+			for k in range(num_sites):
 				output[k][r, :] = output_parallel[r][k].ravel()
+
 	else:
+
 		for r in range(num_realizations):
-			print 'running realization ' + str(r)
+			print('running realization ' + str(r))
 			time1 = time.time()
+
 			Qs = stress_dynamic(Qh, num_years) # or call stress(Qh, num_years, p, n)
 
-			for k in range(len(inflow_files)):
+			for k in range(num_sites):
 				output[k][r, :] = Qs[k].ravel()
 
 			time2 = time.time()
-			print 'stress_dynamic took %0.3f s' % ((time2-time1))
+			print('stress_dynamic took %0.3f s' % ((time2-time1)))
 
-	for k in range(len(inflow_files)):
-		np.savetxt('output/' + inflow_files[k] + 'SYN' + str(int(sample_no)) + '.csv', output[k], delimiter=',')
+	return output
+
+def load_hydro(inflow_files):
+
+	Qh = []
+
+	for k in inflow_files:
+		hyd_data = np.loadtxt(k, delimiter=',')
+		Qh.append(hyd_data)
+
+	return Qh
 
 # if __name__ == '__main__':
 # comm = MPI.COMM_WORLD
 
-# print comm.rank
+# print(comm.rank)
 # gen_sample(comm.rank, 1000)
-num_realizations = [1, 10, 100, 1000, 10000]
-times = []
-for i in range(len(num_realizations)):
-	start = time.clock()
-	gen_sample(i, num_realizations[i])
-	end = time.clock()
-	times.append([end - start, num_realizations[i]])
-
-np.savetxt('times' + '.csv', times, delimiter=',')
