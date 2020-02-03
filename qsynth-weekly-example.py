@@ -3,8 +3,8 @@ from pymfgm import *
 
 
 sample_data_dir = './inflow-data_updated'
-sample_name = 'inflow-weekly'
-num_realizations = [1, 10, 100, 1000, 10000]
+sample_name = 'inflow-weekly-seq'
+num_realizations = [1, 10,] #100, 1000, 10000]
 
 # load historical hydro data
 inflow_files = [os.path.join(sample_data_dir,f) \
@@ -29,7 +29,7 @@ for idx,sample_size in enumerate(num_realizations):
 		num_realizations=sample_size,
 		num_years=51,
 		freq=52,
-		parallel=True
+		# n_proc=4
 	)
 	# write out synthetic data
 	for idx,k in enumerate(inflow_files):
